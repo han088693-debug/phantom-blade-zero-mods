@@ -1,0 +1,197 @@
+PBZZuoShangBoss 0.1.3-preview 验证记录
+日期：2026-11-12（Asia/Shanghai）
+
+本次荆野与共用生成生命周期检查
+- 用户报告：0.1.2 在远处是左殇，靠近后还原为荆野。
+- 15:26:09 原生成器生成龙体左殇；15:26:27 BP_AISpawner:Despawn 后
+  SpawnedAI 清空，旧左殇仍 IsValid=true、IsActorBeingDestroyed=false。
+- 15:26:29 getter 和 BeginAsyncSpawn 再次执行，旧角色仍存在，
+  但控制器已不再持有它；旧记录占位导致 spawn_still_active，
+  最终生成了原荆野。用户再次实测确认走近后还原。
+- 原荆野现场基准：三个等级字段均为 31，Health_Max=238559.984375，
+  Attack=304，AI 初始化完成。证据：UE4SS-jingye-lifecycle-baseline-12.log。
+- SDK 确认预生成、剧情接管、回收、入池、再次生成是共用接口。
+  既有日志观察的 18 个 Boss 生成器均为 BP_AISpawner_C。
+- 图鉴目录含 75 行、79 个候选类别、12 个图鉴地图；它不是完整场景清单。
+  现有 SDK 缺少这 79 个具体 Boss 蓝图的完整实现，不能据此宣布全图已测。
+- 本版按实际生成器身份隔离槽位，并在明确回收后释放旧 active 槽位；
+  pending 取消、未知专用 AI 覆盖不会因此被无条件放行。
+- 本版离线检查：engine 52、state/早期encounter 17、world 4、
+  rules 7、main 7、loot 9，共 96 项相关场景通过。
+  早期 encounter 辅助模块不随包发布，测试数量不是实际 Boss 覆盖率。
+- 额外检查了明确重新绑定后仍返回旧 Boss/旧等级奖励的拒绝分支，
+  已隔离旧映射；跨 Boss 同对象复用仍属未支持路径，不将隔离称为完整适配。
+- 15:58:31 原荆野生成器第一次登记龙体左殇；15:58:33 原生 Despawn 后
+  出现 despawn released；15:58:35 第二次仍成功登记龙体左殇。
+  两次是不同的角色对象，不能将本次结果当作同 UObject 复用的实测证明。
+  本次状态 committed=2、skipped=0、errors=0；旧角色记录暂留用于旧奖励查询，
+  active=2 不是两只 Boss 同时在场的计数。
+- 16:01:11 再次读取现场：生成器 SpawnedAI 指向第二次生成的龙体左殇，
+  原 Class 仍为荆野；本体三个等级字段均为 31，满血 238559.984375，
+  Attack/Attack_Base 均为 304，AI 初始化完成，与原荆野基准一致。
+  当时当前血量为 122213.453125；没有直接改写血量或执行诊断战斗命令。
+  同场左殇 Stand 招式辅助实体未纳入本体数值一致性声明。
+  证据：UE4SS-jingye-spawn-0.1.3-13.log、jingye-0.1.3-live-check.json。
+- 铁狂、三面魔偶主体的 RootFlow 均现场确认为 FlowComponent 拥有者。
+  原三面主体死亡标签为 fjzl.三头魔偶.死亡，脚本及标签没有改写。
+  铁狂流程读到 18 个节点，三面流程读到 21 个节点；部分属性触及读取上限，
+  不能据此宣布所有原角色引用和战斗分支均兼容，两场仍待实战。
+- 临时只读采集曾对没有死亡标签的脚本读取该字段，导致请求 3–8 中止；
+  已限定只读 AddTagOnDead 的标签，请求 9 完整完成，未改变生产替换代码。
+- 安装的 7 个 Lua 与 enabled.txt 均与最终源码哈希一致；
+  27 个原加载器及其它模组文件保持原哈希。
+  安装前当前存档与 0.1.2 已复制、校验，备份：
+  work\preview-install-0.1.3\backups\install-20261112-155616-1597599。
+- 用户确认“走近后仍是左殇，而且会攻击”；但随后击败后发生致命错误。
+  16:03:37 最后记录为 GetCombatLootDataForOwner pre，owner 血量 0，
+  参数为原荆野类别和等级 31，随后没有 post。
+  用户确认自动保存前崩溃、未收到奖励，并已退出游戏。
+  已保存 UE4SS-jingye-crash-0.1.3-14.log、jingye-post-kill-0.1.3.dmp
+  和截图；此轮完整战斗与结算未通过。
+- 转储异常为 UE4SS.dll+0xC7157D 读取地址 0x29；异常路径上包含
+  push_softobjectproperty 的 Set 分支，Lua 值是数字 31。
+  临时 trace 的 native post 沿用 pre 参数序号；加载器在有返回值的
+  post 中会额外插入 ReturnValue，使其误将 EnemyLevel 传给软类转换。
+  使用完整诊断模块离线复现，确认该错位会把数字 31 传入 Kismet。
+  这不是原类参数索引错误的证据，不据此修改生产掉落算法。
+  具体寄存器、反汇编与展开栈见 jingye-crash-dump-analysis.json。
+  转储还确认正在执行的 native post 为诊断的钩子 21/22（生产为 5/6），
+  has_return_value=1、ReturnValueOffset=0x108，非返回参数数目为 4；
+  由此将错误定位到临时诊断的 post 参数错位，而非生产的空 post 回调。
+  对照源码：
+  https://github.com/UE4SS-RE/RE-UE4SS/blob/1ceefac8/UE4SS/src/Mod/LuaMod.cpp
+  https://github.com/UE4SS-RE/RE-UE4SS/blob/1ceefac8/UE4SS/src/LuaType/LuaUObject.cpp
+- 用户退出游戏后，临时诊断 13 个文件已归档、逐一核验并从游戏目录移除。
+  没有在崩溃会话中伪称 trace_off 成功；退出终止了当时的全部诊断钩子。
+  再次检查正式 0.1.3 的 8 个文件与初次安装完全相同，
+  下一轮仅移除诊断因素，没有同时改变生产掉落逻辑。
+- 离线诊断源文件已修复：三种掉落只记录 pre，不建立等待 post 的配对栈；
+  软类转换仅接受确认类型的 userdata，错误的数值不能进入原生转换。
+  4 项独立诊断回归由开发与主复核各执行一次，均通过；不计入前述 96 项，
+  不随安装包发布，也没有重新安装到游戏。
+- 移除诊断后的复测通过：用户明确确认“正常结束，有奖励且已自动保存”。
+  16:20:07、16:21:10、16:21:13 三次原荆野生成器均登记龙体左殇，
+  中间两次原生回收均正确释放占位，最终 committed=3、skipped=0、errors=0。
+  16:24:24 出现战后原生回收；16:24:32 主存档及自动备份写入。
+  当前会话无 Probe 日志、没有新增崩溃转储，游戏继续运行。
+  已归档 UE4SS-jingye-success-no-probe-0.1.3-15.log 和 jingye-0.1.3-final-check.json。
+- 最终文件核对：正式 8 个文件仍与原安装完全一致，其他 27 个文件哈希未变，
+  Probe 目录不存在。没有修改或恢复用户存档。
+- 本次已验证边界：荆野实际替换、攻击、击败后结算、获得奖励与自动保存。
+  尚未独立对比原版荆野奖励的精确种类/数量，也未重启验证本次胜利持久化；
+  铁狂、三面魔偶及其他 Boss 的完整流程仍需各自实战。
+
+0.1.2 花千笑修复与历史实测
+- 0.1.1 实际失败：观看动画后仍为花千笑。
+- 14:44:51 花千笑原类预热成功；生成器的分区关卡 OwningWorld 与玩家一致。
+- 14:44:52、14:46:09 的日志明确因 ExtraScripts 主动跳过，
+  无 selected/committed，不是动画结束后覆盖已经完成的替换。
+- 生成器 HuaQianXiao_Seq027 的 ExtraScripts 恰为：
+  AIScript_SetFlowAsset，RootFlow=BPF_JianChiChuChang；
+  AIScript_OverrideCombatSense，Sense Name=HalfDefaultSight。
+  四个对象覆盖与三个集合覆盖均为空。
+- 原花千笑现场基准：三个等级字段均为 30，满血 175950，基础攻击 302，
+  AI 初始化完成。证据为 UE4SS-flower-scripts-baseline-09.log。
+- 0.1.2 仅对该原类、生成器、森林世界及上述精确脚本配置定向放行，
+  不清空、不替换原脚本；未知组合和其它 AI 覆盖继续跳过。
+- 14:57:28 原生成器 selected/committed 为 BP_Monster_ZuoShang_P2_C，
+  preserved_scripts=flower_entry_flow+HalfDefaultSight，active=1、committed=1、
+  skipped=0、errors=0；原生成器 Class 仍为花千笑。
+- 14:57:59 左殇本体三个等级字段均为 30，满血 175950，基础攻击 302，
+  与原花千笑现场基准相同；本体保留左殇 Actor Config，AI 初始化完成。
+  已归档 UE4SS-flower-spawn-0.1.2-10.log 与 flower-0.1.2-live-check.json。
+- 用户本次实测明确确认：“已变成左殇，而且会攻击”。
+  该反馈发生在请求重新触发花千笑、观看动画后的验证步骤。
+- 保留的出场流程 ExpectedOwnerClass 为 FlowComponent，已读取 13 个节点；
+  部分节点属性触及读取上限，不将该静态检查视为完整剧情兼容证明。
+  临时流程检查曾出现文件加载参数错误，修正后读取完成、failures=0；
+  此错误不在生产替换模块内，没有修改游戏剧情数据。
+- 同场景观察到左殇原生 Stand 辅助实体；本版只映射 Boss 本体数值，
+  未将这些原生招式辅助实体的数值纳入花千笑本体一致性声明。
+- 本次相关离线验证：engine 34、world 4、rules 7、main 7，共 52 项通过。
+- 本次安装的 7 个 Lua 与 enabled.txt 均与源文件逐字节一致。
+- 安装前最新存档和 0.1.1 旧模组已复制并校验，备份位于：
+  work\preview-install-0.1.2\backups\install-20261112-145508-7829787。
+- 尚未验证：击杀后的剧情、奖励、重复挑战及其它 Boss 的完整战斗。
+  金面具黑衣人继续只记录，本次没有专门适配。
+- 临时诊断目录已归档，13 个文件逐一校验后从游戏目录移除。
+  本轮只执行 inspect_worlds 读取，无诊断生成、战斗修改或额外事件钩子。
+  当前游戏内已加载的只读分发循环会随正常退出结束；下次启动不再加载诊断。
+
+以下为 0.1.0 的历史测试基线，不代表 0.1.2 已通过花千笑实战
+
+结论
+已通过三个独立生成器的左殇替换、初始化和原始来源登记检查。
+这是预览版；实际 Boss 战的转阶段、死亡结算和奖励尚未验收。
+用户当前无法提供三面魔偶战前场景，实战检查暂缓。
+
+环境
+Steam PBZ build 26367565；Unreal Engine 5.7。
+现有 PBZ 兼容 UE4SS v3.0.1 Beta #0，Git 1ceefac8。
+单机测试；PBZCoop 已备份并移除；PBZItemBeacon 1.9.0 保留。
+
+游戏内已观察结果
+1. 核对最终战银发左殇 BP_Monster_ZuoShang_Ending 和
+   龙体左殇 BP_Monster_ZuoShang_P2 的资源及 AI 配置。
+   没有使用普通左殇或教程年轻左殇。
+2. 银发与龙体角色可在溪谷初始化；三个龙体可独立同时初始化。
+3. 属性映射单独检查：在测试实例上使用同一正常敌人配置，
+   输入 Blueprint Level=28，Health=9600、Attack=300 与现场原敌人一致。
+   此单独检查未证明原 Boss 的完整等级上下文；随后另做原生生成器检查。
+4. 原生生成器集成检查使用三个临时 BP_AISpawner，各声明三面魔偶的
+   WuLi、Bing、HunDun 原类，且各自仅请求一次生成。
+   实际生成三个不同的龙体左殇，原生成器 Class 保持原类。
+   三个实例独立登记，origin 不同；原生 Blueprint/Combat/Attribute
+   Level 均为 26。初次登记后 Health=111600、Attack=300。
+   后段其中一实例 Health 降为 93001.078125，未追查其损血来源；
+   未进行攻击行为或伤害倍率验收，不能据此宣称持续无伤。
+5. 预热五个类别完成；引擎状态 committed=3、rewrites=3、
+   errors=0、prewarm_errors=0、pending=0、unmanaged_replacements=0。
+   三个 AI 均 initialized=true、started=false。
+   测试生成器没有 MobGroup，因此没有验证真实 Boss 组、阶段和场地逻辑。
+6. 三个掉落接口注册成功，但本次没有调用正常击杀掉落或发奖。
+   离线参数重写通过不等于实际击杀奖励通过。
+7. 测试钩子全部注销；9 个自有对象的销毁调用均成功。
+   UE4SS 包装引用在会话中仍显示有效，未记为“引用数归零”；
+   测试会话随后通过 Alt+F4 正常退出，记录 Event loop end。
+   临时诊断模组已备份、校验并从游戏目录移除。
+
+已修复的测试问题
+- SoftClass 转字符串实际返回 FString，已按实际返回类型处理。
+- 把类加载与 CDO 配置读取移出生成钩子，改为游戏线程定时预热。
+  旧实现测试会话曾阻塞；新实机集成检查顺利完成。
+  未通过线程栈证实旧会话阻塞的唯一原因。
+
+离线验证
+- engine：27 项回归通过，含钩子内禁止类加载、未预热跳过、
+  原生初始化等待、FString、失败停用和生命周期检查。
+- loot：9 项回归通过，含原类/等级参数重写及回滚。
+- rules：7 项，main：6 项，均通过。
+- stats：6 项通过，含原配置、比例保留、写入失败回滚。
+- state 与早期 encounter 辅助模块：13 项通过。
+  早期 encounter 辅助模块不随包发布，其检查不算实际 Boss 覆盖率。
+- 安装器在隔离目录通过安装、升级前旧版备份、哈希失败阻止覆盖、
+  卸载、拒绝内部 junction、存档/其他 Mod 保持不变检查。
+
+安装入口加载检查
+预览包的六个 Lua 模块与 enabled.txt 已安装到游戏的
+platform\steam\ue4ss\Mods\PBZZuoShangBoss。
+从 Steam 正常启动并继续存档，实际 main.lua 读取到 75 个 Boss 图鉴行；
+此数量是数据行数，不是已验证的战斗数量。
+银发、龙体和当前地图两个 Boss 原类预加载完成，钩子注册成功。
+日志 ready=true active=0 committed=0 skipped=0 errors=0。
+角色仍在溪谷存档点，没有触发自然 Boss 战；active=0 符合此次检查范围。
+该入口与私有生成器集成检查是两项不同的验证。
+随后正常退出游戏，日志确认 Event loop end；预览 Mod 保持已安装、启用。
+
+尚未验证
+三面魔偶真实战斗的三体出现时机、转阶段、击杀结束、剧情和奖励；
+全 Boss/全地图覆盖；死亡重试与换图；多周目数值与进度；
+特殊 AI 覆盖生成器、正常攻击与招式衔接、联机兼容。
+本版遇到未适配的 AI 覆盖会跳过，不承诺每个 Boss 都已成功替换。
+
+清理与存档
+诊断和预览安装检查全部结束后，27 个存档文件与开始前备份逐字节一致。
+27 个既有模组/共享加载器文件与备份清单一致。
+游戏内安装的 7 个预览文件与本次发布源文件逐字节一致。
+完整日志和私有测试资料留在工作目录，不包含在发布 ZIP 内。

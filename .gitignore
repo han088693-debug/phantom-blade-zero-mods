@@ -1,0 +1,13 @@
+# 安装脚本产生的本地备份与存档副本
+backups/
+SaveGames/
+
+# 日志
+*.log
+
+# 发行包资产走 GitHub Releases，不进仓库
+release-assets/
+
+# Windows
+Thumbs.db
+desktop.ini
