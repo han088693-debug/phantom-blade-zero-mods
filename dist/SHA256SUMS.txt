@@ -1,0 +1,2 @@
+d6f765cedaad3716247fad4a7b64d7ae6ff547c386b4c187f85b18cf6aab5a84  PBZItemBeacon-1.9.0-full.zip
+83294a3faabeb2b25bdbfd77da8e66d7ad517b3dffaea2eb1a509f8e57e8ff4c  PBZZuoShangBoss-0.1.3-preview.zip

@@ -1,6 +1,6 @@
 # 影之刃零 · 模组合集
 
-针对《影之刃零》（Phantom Blade Zero）Windows Steam 版的两个 [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS) Lua 模组。本仓库放源码、说明与验证记录；可直接安装的完整包在 [Releases](../../releases) 页。
+针对《影之刃零》（Phantom Blade Zero）Windows Steam 版的两个 [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS) Lua 模组。本仓库放源码、说明与验证记录；可直接安装的完整包在 [`dist/`](dist) 目录，各版本变更见 [Releases](../../releases)。
 
 | 模组 | 版本 | 作用 |
 | --- | --- | --- |
@@ -22,7 +22,7 @@
 
 ### 道具名称与距离提示
 
-**全新安装（还没有 UE4SS）** —— 从 [Releases](../../releases) 下载 `PBZItemBeacon-1.9.0-full.zip`：
+**全新安装（还没有 UE4SS）** —— 下载 [`dist/PBZItemBeacon-1.9.0-full.zip`](dist/PBZItemBeacon-1.9.0-full.zip)：
 
 1. 完全退出游戏，把压缩包解压到任意普通文件夹。
 2. Steam 库中右键「影之刃零」→ 管理 → 浏览本地文件，进入游戏根目录（里面已有 `platform` 文件夹）。
@@ -42,7 +42,7 @@
 
 ### 左殇 Boss 替换
 
-1. 完全退出游戏,解压 [`PBZZuoShangBoss-0.1.3-preview.zip`](../../releases)。
+1. 完全退出游戏，解压 [`dist/PBZZuoShangBoss-0.1.3-preview.zip`](dist/PBZZuoShangBoss-0.1.3-preview.zip)。
 2. 在解压出的文件夹里打开 PowerShell：
 
    ```powershell
@@ -73,10 +73,18 @@
 │       ├── VALIDATION.txt   实测与离线检查记录
 │       └── SHA256SUMS.txt   发行文件校验值
 ├── docs/                    发行包内原始说明（逐字保留）
+├── dist/                    可直接安装的完整包与校验值
 └── releases/                发行说明，见 Releases 页
 ```
 
-本仓库**不含** UE4SS 加载器二进制（`UE4SS.dll`、`dwmapi.dll`）。需要开箱即用请下载 Releases 里的完整包；只要 Lua 源码请直接看 `mods/`。
+`dist/` 里的两个包是发布版本的原样压缩包：
+
+| 文件 | 大小 | SHA-256 |
+| --- | --- | --- |
+| `PBZItemBeacon-1.9.0-full.zip` | 8.7 MB | `d6f765ce…6aab5a84` |
+| `PBZZuoShangBoss-0.1.3-preview.zip` | 34 KB | `83294a3f…7e8ff4c` |
+
+完整校验值见 [`dist/SHA256SUMS.txt`](dist/SHA256SUMS.txt)。本仓库的 `mods/` 只有 Lua 源码，不含 UE4SS 加载器；加载器在完整包内。
 
 ## 已验证到什么程度
 

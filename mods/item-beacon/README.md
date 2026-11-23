@@ -10,7 +10,7 @@
 
 ### A. 全新安装（还没有 UE4SS）
 
-用 Releases 里的 `PBZItemBeacon-1.9.0-full.zip`（自带加载器）：
+用 [`dist/PBZItemBeacon-1.9.0-full.zip`](../../dist/PBZItemBeacon-1.9.0-full.zip)（自带加载器）：
 
 1. 完全退出游戏，解压到普通文件夹。
 2. Steam 库右键游戏 → 管理 → 浏览本地文件，进入游戏根目录。
